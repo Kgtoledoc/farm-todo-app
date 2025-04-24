@@ -1,39 +1,37 @@
-from contextlib import aynccontectmanager
+from contextlib import asynccontextmanager
 from datetime import datetime
 import os
 import sys
 
 from bson import ObjectId
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, HTTPException
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
 import uvicorn
 
 from dal import ToDoDAL, ListSummary, ToDoList, ToDoListItem
 
-COLLETION_NAME = "todo_lists"
-MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+COLLECTION_NAME = "todo_lists"
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017/todoapp")
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
-@asynccontectmanager
+@asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize the database connection
     client = AsyncIOMotorClient(MONGODB_URL)
     database = client.get_default_database()
 
-    # Ensure the database is available
     pong = await database.command("ping")
     if pong.get("ok") != 1:
         raise RuntimeError("Failed to connect to the database")
 
-    todo_list = database.get_collection(COLLETION_NAME)
+    todo_list = database.get_collection(COLLECTION_NAME)
     app.todo_dal = ToDoDAL(todo_list)
+
     try:
         yield
     finally:
-        # Close the database connection
         client.close()
-    
+
 app = FastAPI(lifespan=lifespan, debug=DEBUG)
 
 @app.get("/api/lists")
@@ -47,11 +45,10 @@ class NewListResponse(BaseModel):
     id: str
     name: str
 
-@app.post("api/lists", status_code=status.HTTP_201_CREATED, response_model=NewListResponse)
+@app.post("/api/lists", status_code=status.HTTP_201_CREATED, response_model=NewListResponse)
 async def create_todo_list(new_list: NewList) -> NewListResponse:
     id = await app.todo_dal.create_todo_list(new_list.name)
     return NewListResponse(id=id, name=new_list.name)
-
 
 @app.get("/api/lists/{list_id}", response_model=ToDoList)
 async def get_todo_list(list_id: str) -> ToDoList:
@@ -60,11 +57,9 @@ async def get_todo_list(list_id: str) -> ToDoList:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="List not found")
     return todo_list
 
-
 @app.delete("/api/lists/{list_id}")
 async def delete_todo_list(list_id: str) -> bool:
     return await app.todo_dal.delete_todo_list(list_id)
-
 
 class NewItem(BaseModel):
     label: str
@@ -93,18 +88,13 @@ class ToDoItemUpdate(BaseModel):
     item_id: str | None = None
     checked_state: bool | None = None
 
-@app.path("/api/lists/{list_id}/checked_state", methods=["PUT"])
-async def set_checked_state(
-    list_id: str,
-    item_id: str,
-    update: ToDoItemUpdate
-) -> ToDoList:
-return await app.todo_dal.set_checked_state(
-    list_id,
-    item_id,
-    update.checked_state,
-)
-
+@app.put("/api/lists/{list_id}/checked_state")
+async def set_checked_state(list_id: str, item_id: str, update: ToDoItemUpdate) -> ToDoList:
+    return await app.todo_dal.set_checked_state(
+        list_id,
+        item_id,
+        update.checked_state,
+    )
 
 class DummyResponse(BaseModel):
     id: str

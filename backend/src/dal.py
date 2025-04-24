@@ -1,10 +1,9 @@
 from bson import ObjectId
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorCollection
 from pymongo import ReturnDocument
-
 from pydantic import BaseModel
-
 from uuid import uuid4
+from typing import Optional
 
 class ListSummary(BaseModel):
     id: str
@@ -50,27 +49,27 @@ class ToDoDAL:
         self.todo_collection = todo_collection
 
     async def list_todo_lists(self, session=None):
-        async for doc in self._todo_collection.find(
+        async for doc in self.todo_collection.find(
             {},
             projection={
                 "name": 1,
                 "item_count": ["$size", "$items"]
             },
-            sort={"name":1}
+            sort={"name": 1},
             session=session
         ):
             yield ListSummary.from_doc(doc)
 
     async def create_todo_list(self, name: str, session=None) -> str:
-        response = await self._todo_collection.insert_one(
+        response = await self.todo_collection.insert_one(
             {
                 "name": name, "items": []},
                 session=session
         )
         return str(response.inserted_id)
 
-    async def get_todo_list(self, id: str, | ObjectId, session=None) -> ToDoList:
-        doc = await self._todo_collection.find_one(
+    async def get_todo_list(self, id: str | ObjectId, session=None) -> Optional[ToDoList]:
+        doc = await self.todo_collection.find_one(
             {"_id": ObjectId(id)},
             session=session
         )
@@ -79,7 +78,7 @@ class ToDoDAL:
         return ToDoList.from_doc(doc)
 
     async def delete_todo_list(self, id: str | ObjectId, session=None) -> bool:
-        response = await self._todo_collection.delete_one(
+        response = await self.todo_collection.delete_one(
             {"_id": ObjectId(id)},
             session=session
         )
@@ -90,8 +89,8 @@ class ToDoDAL:
         id: str | ObjectId,
         label: str,
         session=None,
-    ) -> ToDoList | None:
-        result = await self._todo_collection.find_one_and_update(
+    ) -> Optional[ToDoList]:
+        result = await self.todo_collection.find_one_and_update(
             {"_id": ObjectId(id)},
             {
                 "$push": {
@@ -115,8 +114,8 @@ class ToDoDAL:
         item_id: str,
         checked_state: bool,
         session=None,
-    ) -> ToDoList | None:
-        result = await self._todo_collection.find_one_and_update(
+    ) -> Optional[ToDoList]:
+        result = await self.todo_collection.find_one_and_update(
             {
                 "_id": ObjectId(doc_id),
                 "items._id": item_id
@@ -138,8 +137,8 @@ class ToDoDAL:
         doc_id: str | ObjectId,
         item_id: str,
         session=None,
-    ) -> ToDoList | None:
-        result = await self._todo_collection.find_one_and_update(
+    ) -> Optional[ToDoList]:
+        result = await self.todo_collection.find_one_and_update(
             {
                 "_id": ObjectId(doc_id),
                 "items._id": item_id

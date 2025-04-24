@@ -40,3 +40,6 @@ Thumbs.db
 *.temp
 
 backend/venv/
+
+backend/__pycache__/
+
