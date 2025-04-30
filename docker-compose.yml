@@ -1,5 +1,16 @@
 name: todo-app
 services:
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongodb_data:/data/db
+    restart: always
   nginx:
     image: nginx:latest
     container_name: todo-app-nginx
@@ -45,4 +56,8 @@ services:
     env_file:
       - path: ./.env
         required: true
+    depends_on:
+      - mongodb
+volumes:
+  mongodb_data:
 
