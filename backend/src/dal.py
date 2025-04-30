@@ -49,15 +49,19 @@ class ToDoDAL:
         self.todo_collection = todo_collection
 
     async def list_todo_lists(self, session=None):
-        async for doc in self.todo_collection.find(
-            {},
-            projection={
-                "name": 1,
-                "item_count": ["$size", "$items"]
-            },
-            sort={"name": 1},
+        cursor = self.todo_collection.aggregate(
+            [
+                {
+                    "$project": {
+                        "name": 1,
+                        "item_count": {"$size": "$items"}
+                    }
+                },
+                {"$sort": {"name": 1}}
+            ],
             session=session
-        ):
+        )  # El paréntesis de cierre debe estar aquí
+        async for doc in cursor:  # Ahora el bucle está dentro de la función
             yield ListSummary.from_doc(doc)
 
     async def create_todo_list(self, name: str, session=None) -> str:

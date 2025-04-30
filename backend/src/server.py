@@ -36,6 +36,7 @@ app = FastAPI(lifespan=lifespan, debug=DEBUG)
 
 @app.get("/api/lists")
 async def get_all_lists() -> list[ListSummary]:
+    print("Fetching all lists")
     return [i async for i in app.todo_dal.list_todo_lists()]
 
 class NewList(BaseModel):

@@ -57,9 +57,9 @@ function App() {
         <h1>To Do List</h1>
         <ListToDoLists
           listSummaries={listSummaries}
-          onSelectToDoList={handleSelectToDoList}
-          onDeleteToDoList={handleDeleteToDoList}
-          onNewToDoList={handleNewToDoList}
+          handleSelectList={handleSelectToDoList}
+          handleNewToDoList={handleNewToDoList} // Asegúrate de que esta línea esté presente
+          handleDeleteToDoList={handleDeleteToDoList}
         />
       </div>
     );
